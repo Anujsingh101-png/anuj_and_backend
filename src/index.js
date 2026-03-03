@@ -9,9 +9,9 @@ dotenv.config({
 
 connectDB()
 .then(() => {
-    app.listen(process.env.PORT || 8000) , () => {
+    app.listen(process.env.PORT || 8000 , () => {
     console.log(`server is stabilsed connection on the port ${process.env.PORT || 8000}`);
-    }
+     })
 })
 .catch((error) => {
     console.log(`connection is not stabilsed to the port ${process.env.PORT || 8000}`)

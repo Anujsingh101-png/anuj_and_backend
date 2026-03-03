@@ -3,7 +3,7 @@ class apierror extends Error{
         statuscode,                               //Every time you use new, the constructor builds and prepares the object.
         massage= "something went wronge",
         errors = [],
-        statck = ""
+        stack = ""
     )
     {
         super(massage),
@@ -15,7 +15,7 @@ class apierror extends Error{
 
 
         if(stack){
-            this.statck = stack
+            this.stack = stack
         }else{
             Error.capturestacktrack(this,this.constructor)
         }
