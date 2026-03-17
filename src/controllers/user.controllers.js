@@ -23,15 +23,15 @@ if([username,email,fullname,password].some((field) =>                       // m
    throw new apierror(400 , "please fill the required fileds")
 }
 
-const existedUser = User.findOne({
+const existedUser =  await User.findOne({
     $or : [{username} , {email}]
 })
 
-if(exsistedUser){
+if(existedUser){
     throw new apierror(409,"username and email is already exsisted") 
 }
- const avatarlocalpath = req.files?.avatar[0]?.path                      //is used to get the file path of uploaded images from Multer
- const coverImagelocalpath = req.files?.coverImagelocal[0]?.path
+ const avatarlocalpath = req.files?.avatar?.[0]?.path                      //is used to get the file path of uploaded images from Multer
+ const coverImagelocalpath = req.files?.coverImagelocal?.[0]?.path
 
  if(!avatarlocalpath){
     throw new apierror(409,"please upload your avatar")
@@ -46,7 +46,7 @@ if(exsistedUser){
 
 const user = await User.create({
     username : username.toLowerCase(),
-    email,
+    email,                                                       // this contain password taht why we create another variable created user to remove password
     avatar : avatar.url,
     coverImage : coverImage?.url || "",
     password,
@@ -62,12 +62,12 @@ if(!createduser){
 }
 
 return res.status(201).JSON(
-    new api_response(200,createduser,"user register successfully")
+    new api_response(200,createduser,"user register successfully")                            //this response is sent to the frontend (or Postman while testing).
 )
 
 
 })
 
 export{
-    registeruser,
+    registeruser
 }
