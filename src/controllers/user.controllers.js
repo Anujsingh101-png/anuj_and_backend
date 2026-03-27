@@ -3,14 +3,15 @@ import { apierror } from "../utils/apierror.js";
 import { User } from "../model/users.model.js";
 import { uploadonCloudinary } from "../utils/cloudinary.js";
 import { api_response } from "../utils/api_response.js";
-import { json } from "express";
+import { JsonWebTokenError } from "jsonwebtoken";
+
 
 const generateRefershTokenAndAccessToken = async(userid) => {
    try {
     const user = await User.findById(userid)
 
-    const refreshtoken = generaterefreshtokens()
-    const accesstoken = generateaccesstokens()
+    const refreshtoken = user.generaterefreshtokens()
+    const accesstoken = user.generateaccesstokens()
 
     user.refreshtoken = refreshtoken
 
@@ -35,7 +36,6 @@ const registeruser = asynchandler(async(req,res) => {                // i can al
 // return res
 
 const {username,email,fullname,password} = req.body
-console.log("email :" , email);
 
 if([username,email,fullname,password].some((field) =>                       // made by simple if also
     field?.trim() === "") ){
@@ -45,6 +45,7 @@ if([username,email,fullname,password].some((field) =>                       // m
 const existedUser =  await User.findOne({
     $or : [{username} , {email}]
 })
+
 
 if(existedUser){
     throw new apierror(409,"username and email is already exsisted") 
@@ -56,7 +57,7 @@ if(existedUser){
     throw new apierror(409,"please upload your avatar")
  }
  console.log(res.files)
- console.log("File path:", coverImagelocalpath)
+ console.log("File path:", avatarlocalpath )
  console.log("File object:", req.files)
 
  const avatar = await uploadonCloudinary(avatarlocalpath)                                            //Wait until this async task finishes before moving to the next line.
@@ -70,11 +71,10 @@ const user = await User.create({
     username : username.toLowerCase(),
     email,                                                       // this contain password taht why we create another variable created user to remove password
     avatar : avatar.url,
-    coverImage : coverImage.url || "",
+    coverImage : coverImage?.url || "",
     password,
     fullname
  })
-
 const createduser = await User.findById(user._id).select(
     "-password -refreshToken"
 )
@@ -111,7 +111,7 @@ const userlogin = asynchandler(async(req,res) =>{
  
  const {username , email , password} = req.body
 
- if(!username || !email){
+ if(!(username || email)){
     throw new apierror(400,"please enter username or password");  
  }
 
@@ -144,7 +144,7 @@ return res
 .cookie("refreshtoken" , refreshtoken,options)
 .cookie( "accesstoken" , accesstoken,options)
 .json(
-    api_response(
+   new api_response(
         200,
         {
             user : loggedinuser , refreshtoken , accesstoken
@@ -183,8 +183,50 @@ return res
 
 })
 
+const refreshtoken = asynchandler(async(req,res) => {
+
+    const incommingrefreshtoken = req.cookies.refreshtoken || req.body.refreshtoken
+
+    if(!incommingrefreshtoken){
+        throw new apierror(401,"unautherise request")
+    }
+    
+   const decodedtoken = jwt.verify(
+        incommingrefreshtoken,
+        process.env.REFRESH_TOKEN_SECREAT
+    )
+
+    const user = await User.findById(decodedtoken?._id)
+
+    if(!user){
+        throw new apierror(401,"invalied refreshtoken") 
+  }
+  
+  if(incommingrefreshtoken !== user?. refreshToken){
+    throw new apierror(401,"refresh token is expired or used ")
+  }
+ 
+  const options = {
+    httponly : true,
+    secure: true
+  }
+
+  const {newrefreshToken,accesstoken} = generateRefershTokenAndAccessToken(user._id)
+
+ return  res
+ .status(200)
+ .cookie("accesstoken", accesstoken,options )
+ .cookie("refreshtoken",newrefreshToken,options) 
+ .json(
+    new api_response(
+        200,refreshtoken,"token refreshed successfully"
+    )
+ )
+
+})
 export{
     registeruser,
     userlogin,
-    userlogout
+    userlogout,
+    refreshtoken
 }

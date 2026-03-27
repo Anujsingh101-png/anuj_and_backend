@@ -4,7 +4,7 @@ import JsonWebToken  from "jsonwebtoken";
 
 const userSchema = new Schema({
     username : {
-        type : "string",
+        type : String,
         required : true,
         lowercase : true,
         unique : true,
@@ -12,38 +12,38 @@ const userSchema = new Schema({
         index : true                  // for optimise searching in mongoodb
     },
     email :{
-        type : "string",
+        type : String,
         required : true,
         lowercase : true,
         unique : true,
         trim : true,
     },
     fullname :{
-        type : "string",
+        type : String,
         required : true,
         lowercase : true,
         trim : true,
         index : true
     },
     avatar : {
-        type : "string",                //   connection with a cloudenary environment
+        type : String,                //   connection with a cloudenary environment
          required : true,
     },
     coverimage : {
-        type : "string"  ,      // clouednary environment
+        type : String  ,      // clouednary environment
     },
     watchistory : [
        { 
-        type : Schema.Types.ObjectID,
+        type : Schema.Types.ObjectId,
         ref : "Videos"
        } 
    ],
    password : {
-    type : "string",
+    type : String,
     required : [true , "password must be required"]                  // it can be used for every true field
    },
    refreshToken : {
-    type : "string"
+    type : String
    }
 },{timestamps : true})
 
