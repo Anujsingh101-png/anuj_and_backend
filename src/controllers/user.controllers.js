@@ -222,11 +222,198 @@ const refreshtoken = asynchandler(async(req,res) => {
         200,refreshtoken,"token refreshed successfully"
     )
  )
+})
+const changecurrentpassword = asynchandler(async(req,res) => {
+
+    const {oldpassword , newpassword} = req.body
+        const user = await User.findById(req.user?._id)
+    const ispasswordcorrect = user.ispasswordcorrect(oldpassword)
+     
+    if(!ispasswordcorrect){
+        throw new apierror(401,"your old password is incorrect")
+    }
+    user.password = newpassword
+    user.save({validateBeforeSave : true})
+
+    return res
+    .status(200)
+    .json(api_response(200,{},"password is successfully updated"))
+})
+
+const currentuser = asynchandler(async(req,res) => {
+    return res
+    .status(200)
+    .json(
+        new api_response(200,req.user,"current user featch successfully")
+    )
+})
+
+const updateaccountdetails = asynchandler(async(req,res) => {
+    const {fullname,email} = req.body
+
+    if(!(fullname || email)){
+       throw new apierror(401,"please enter the required field")
+    }
+    
+    const user = User.findByIdAndUpdate(req.user?._id,
+        {
+            $set : {
+                fullname,
+                email
+            }
+        },{new:true}
+        
+    ).select("-password")
+
+    return res
+    .status(200)
+    .json(
+        new api_response(200,user,"account details are successfully updated")
+    )
 
 })
+
+const avatarupdate = asynchandler(async(req,res) => {
+
+ const avatarlocalpath = req.file?.path 
+
+ if(!avatarlocalpath){
+    throw new apierror(409,"please upload your avatar")
+ }
+ const newavatar = await uploadonCloudinary(avatarlocalpath) 
+
+//TODO = delete old image from cloudinary
+
+ if(!newavatar.url){
+    throw new apierror(401,"new avatar is not uploaded on cloudinary")
+ }
+
+ const user = await User.findByIdAndUpdate(req.user?._id ,
+    {
+        $set : {
+            avatar : newavatar.url
+        }
+    },{new:true}
+ ).select("-password")
+
+ return res
+ .status(200)
+ .json(
+    new api_response(200,user,"avatar is successfully updated")
+ )
+
+})
+
+const coverimageupdate = asynchandler(async(req,res) => {
+
+ const coverimagelocalpath = req.file?.path 
+
+ if(!coverimagelocalpath){
+    throw new apierror(409,"please upload your coverimage")
+ }
+ const newcoverimage = await uploadonCloudinary(coverimagelocalpath) 
+
+ if(!newcoverimage.url){
+    throw new apierror(401,"new avatar is not uploaded on cloudinary")
+ }
+
+ const user = await User.findByIdAndUpdate(req.user?._id ,
+    {
+        $set : {
+            coverimage : newcoverimage.url
+        }
+    },{new:true}
+ ).select("-password")
+
+ return res
+ .status(200)
+ .json(
+    new api_response(200,user,"coverimage is successfully updated")
+ )
+
+})
+
+const getUserChannelProfile = asynchandler(async(req,res) => {
+    const {username} = req.params
+
+    if(!username?.trim()){
+        new apierror(400 , "username is not present")
+    }
+
+    const channel = await User.aggregate([
+        {
+            $match : {
+                username : username?.toLowerCase()
+            }
+        },
+        {
+            $lookup : {
+                from: "subscriptions",
+                localField: "_id",
+                foreignField: "channel",
+                as: "subscribers"
+            }
+        },
+        {
+            $lookup : {
+                from: "subscriptions",
+                localField: "_id",
+                foreignField: "subscriber",
+                as: "subscribedTo"
+            }
+        },
+        {
+           $addFields : {
+            subscribercount : {
+                $size: "$subscribers"
+            },
+            subscribedchannelcount : {
+                $size : "$subscribedTo"
+            },
+            IsSubscribed : {
+           $cond : {
+            if : {$in : [req.user?._id,"$subscribers.subscriber"]},
+            then : true,
+            else : false
+        }
+        }
+    }
+    },
+    {
+        $project : {
+            fullname : 1,
+            username : 1,
+            createdAt : 1,
+            coverimage : 1,
+            avatar : 1,
+            subscribercount : 1,
+            subscribedchannelcount : 1,
+            IsSubscribed : 1
+
+        }
+    }
+    ])
+
+if(!channel?.length){
+    throw new apierror(400,"channel not found")
+}
+
+return res
+.status(200)
+.json(
+new api_response(200,channel[0],"user infromation is successfully send")
+)
+})
+
 export{
     registeruser,
     userlogin,
     userlogout,
-    refreshtoken
+    refreshtoken,
+    changecurrentpassword,
+    currentuser,
+    updateaccountdetails,
+    avatarupdate,
+    coverimageupdate,
+    getUserChannelProfile
 }
