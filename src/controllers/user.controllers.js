@@ -4,6 +4,7 @@ import { User } from "../model/users.model.js";
 import { uploadonCloudinary } from "../utils/cloudinary.js";
 import { api_response } from "../utils/api_response.js";
 import { JsonWebTokenError } from "jsonwebtoken";
+import mongoose from "mongoose";
 
 
 const generateRefershTokenAndAccessToken = async(userid) => {
@@ -390,7 +391,7 @@ const getUserChannelProfile = asynchandler(async(req,res) => {
             subscribedchannelcount : 1,
             IsSubscribed : 1
 
-        }
+        }                            // it just create temprory result to just further send it to the user 
     }
     ])
 
@@ -405,6 +406,55 @@ new api_response(200,channel[0],"user infromation is successfully send")
 )
 })
 
+const GetWatchHistory = asynchandler(async(req,res) => {
+    const user = await User.aggregate([
+       {
+        $match : new mongoose.Types.ObjectId(req.user._id)
+       },
+       {
+        $lookup : {
+            from : "videos",
+            localField : "watchistory",
+            foreignField : "_id",
+            as : "watchistory",
+            pipeline : ([
+                {
+                $lookup : {
+                    from : "users",
+                    localField : "owner",
+                    foreignField : "_id",
+                    as : "owner",
+                    pipeline : ([
+                        {
+                            $project : {
+                                fullname : 1,
+                                username : 1,
+                                avatar : 1
+                            }
+                        }
+                    ])
+                }
+            }
+            ])
+        }
+       },
+       {
+        $addFields : {
+            owner : {
+                $first : "owner"
+            }
+        }
+       }
+
+    ]
+)
+res
+.status(200)
+.json(
+    new api_response(200,user[0],"watch history is sucessfully send")
+)
+})
+
 export{
     registeruser,
     userlogin,
@@ -415,5 +465,6 @@ export{
     updateaccountdetails,
     avatarupdate,
     coverimageupdate,
-    getUserChannelProfile
+    getUserChannelProfile,
+    GetWatchHistory
 }
